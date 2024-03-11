@@ -24,11 +24,19 @@ class Market:
             self.balance[i] = 0
         self.bids = [] # List of Bid objects
         self.asks = [] # List of Ask objects
+        self.bid_dict = {}
+        self.ask_dict = {}
     
     def add_bid(self, owner, price, quantity):
+        if owner in self.bid_dict:
+            return
+        self.bid_dict[owner] = (price, quantity)
         self.bids.append(Bid(owner, price, quantity))
     
     def add_ask(self, owner, price, quantity):
+        if owner in self.ask_dict:
+            return
+        self.ask_dict[owner] = (price, quantity)
         self.asks.append(Ask(owner, price, quantity))
     
     def sort_bids(self):
@@ -132,7 +140,15 @@ class Market:
         self.print_position()
         self.print_balance()
         self.view_orderbook()
-        
+        self.orderbook_spreads = {}
+        # Calculate difference between bid and ask for each person
+        for key in self.position:
+            self.orderbook_spreads[key] = self.ask_dict.get(key, 99999999)[0] - self.bid_dict.get(key, 0)[0]
+    
+    def rank(self):
+        # Rank people by balance, tie broken by smaller orderbook spreads
+        self.ranking = sorted(self.balance, key=lambda x: (self.balance[x], self.orderbook_spreads[x]))
+    
     def settle(self):
         # Convert position to balance, using true value.
         for key in self.position:

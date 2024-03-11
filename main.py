@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import simpledialog, messagebox, Label, Entry, Button
+from tkinter import simpledialog, messagebox, Label, Entry, Button, ttk
 from markets import Market
 
 class MarketApp:
@@ -7,14 +7,15 @@ class MarketApp:
         self.master = master
         self.market = market
         self.entries = []  # To keep track of all entry widgets for bids and asks
-        tk.Button(root, text="View Positions", command=self.view_positions).grid(row = 0, column=0)
-        tk.Button(root, text="View Balances", command=self.view_balances).grid(row = 0, column=1)
-        tk.Button(root, text="Take Bid", command=self.submit_bid_take).grid(row = 0, column=2)
-        tk.Button(root, text="Take Ask", command=self.submit_ask_take).grid(row = 0, column=3)
-        tk.Button(root, text="Start Game", command=self.start_game).grid(row = 0, column=4)
-        tk.Button(root, text="Create Order Form", command=self.create_order_form).grid(row = 0, column=5)
-        tk.Button(root, text="Submit Order Form", command=self.submit_orders).grid(row = 0, column=6)
-        tk.Button(root, text="View Orderbook", command=self.view_orderbook).grid(row = 0, column=7)
+        tk.Button(root, text="Take Bid", command=self.submit_bid_take).grid(row = 0, column=0)
+        tk.Button(root, text="Take Ask", command=self.submit_ask_take).grid(row = 0, column=1)
+        tk.Button(root, text="Start Game", command=self.start_game).grid(row = 0, column=2)
+        tk.Button(root, text="Create Order Form", command=self.create_order_form).grid(row = 0, column=3)
+        tk.Button(root, text="Submit Order Form", command=self.submit_orders).grid(row = 0, column=4)
+        tk.Button(root, text="View Orderbook", command=self.view_orderbook).grid(row = 0, column=5)
+        tk.Button(root, text="Settle", command=self.settle).grid(row = 0, column=6)
+        tk.Button(root, text="View Balance and Positions", command=self.view_balance_and_positions).grid(row = 0, column=7)
+        tk.Button(root, text="Rank", command=self.rank).grid(row = 0, column = 8)
     def create_order_form(self):
         self.entries = []  # Clear the entries list
         for i in range(1, self.market.num_people + 1):
@@ -97,9 +98,46 @@ class MarketApp:
         balances = "\n".join([f"Person {k}: {v}" for k, v in market.balance.items()])
         messagebox.showinfo("Balances", balances)
         
+    def view_balance_and_positions(self):
+        status_window = tk.Toplevel(self.master)
+        status_window.title("Status")
+        
+        tree = ttk.Treeview(status_window, columns=('Owner', 'Position', 'Balance'), show='headings')
+        tree.heading('Owner', text='Owner')
+        tree.heading('Position', text='Position')
+        tree.heading('Balance', text='Balance')
+        tree.pack(expand=True, fill='both')
+        
+        for key in market.position:
+            tree.insert('', 'end', values=(key, market.position[key], market.balance[key]))
+        
+        
     def view_orderbook(self):
-        orderbook = "Bids:\n" + "\n".join([f"{bid.owner} {bid.price} {bid.quantity}" for bid in market.bids]) + "\nAsks:\n" + "\n".join([f"{ask.owner} {ask.price} {ask.quantity}" for ask in market.asks])
-        messagebox.showinfo("Orderbook", orderbook)
+        # Create a new window to display the order book
+        style = ttk.Style()
+
+        style.configure("Treeview", font=("Helvetica", 20))
+        style.configure("Treeview", rowheight = 30)
+        orderbook_window = tk.Toplevel(self.master)
+        orderbook_window.title("Orderbook")
+
+        # Create a Treeview widget within the new window
+        tree = ttk.Treeview(orderbook_window, columns=('Owner', 'Price', 'Quantity'), show='headings')
+        tree.heading('Owner', text='Owner')
+        tree.heading('Price', text='Price')
+        tree.heading('Quantity', text='Quantity')
+        tree.pack(expand=True, fill='both')
+
+        # Insert bids into the Treeview, in reverse order
+        for bid in market.bids[::-1]:
+            tree.insert('', 'end', values=(bid.owner, bid.price, bid.quantity), tags=('bid',))
+        # Insert asks into the Treeview
+        for ask in market.asks:
+            tree.insert('', 'end', values=(ask.owner, ask.price, ask.quantity), tags=('ask',))
+
+        # Optionally, configure the tags to style bids and asks differently
+        tree.tag_configure('bid', background='lightgreen')
+        tree.tag_configure('ask', background='lightcoral')
 
     def start_game(self):
         market.start_game()
@@ -108,12 +146,24 @@ class MarketApp:
     def settle(self):
         market.settle()
         messagebox.showinfo("Info", "Settlement done!")
+    
+    def rank(self):
+        market.rank()
+        rank_window = tk.Toplevel(self.master)
+        rank_window.title("Ranking")
+        tree = ttk.Treeview(rank_window, columns=('Owner', 'Balance', 'Spread'), show='headings')
+        tree.heading('Owner', text='Owner')
+        tree.heading('Balance', text='Balance')
+        tree.heading('Spread', text='Spread')
+        tree.pack(expand=True, fill='both')
+        for key in market.ranking:
+            tree.insert('', 'end', values=(key, market.balance[key], market.orderbook_spreads[key]))
 
 # read true value from true_value.txt
 with open("true_value.txt", "r") as f:
     true_value = float(f.read().strip())
 
-market = Market(true_value=true_value, num_people=11)
+market = Market(true_value=true_value, num_people=3)
 root = tk.Tk()
 app = MarketApp(root, market)
 # market = Market(true_value=100, num_people=5)
