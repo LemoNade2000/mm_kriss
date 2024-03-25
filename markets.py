@@ -11,21 +11,36 @@ class Ask:
         self.quantity = quantity
 
 class Market:
-    def __init__(self, true_value, num_people):
+    def __init__(self, true_value = 0, num_people = 12):
         self.true_value = true_value
         self.num_people = num_people
         ## position is a dict to represent each person's position
         self.position = {}
         ## balance is a dict to represent each person's balance
         self.balance = {}
+        ## Point system to rank people
+        self.points = {}
         ## Initialize all entries with 0. Person are denoted as 1, 2, 3 ...
         for i in range(1, num_people + 1):
             self.position[i] = 0
             self.balance[i] = 0
+            self.points[i] = 0
         self.bids = [] # List of Bid objects
         self.asks = [] # List of Ask objects
         self.bid_dict = {}
         self.ask_dict = {}
+        self.orderbook_spreads = {}
+    
+    def set_true_value(self, true_value):
+        self.true_value = true_value
+    
+    def set_num_people(self, num_people):
+        self.num_people = num_people
+        self.position = {}
+        self.balance = {}
+        for i in range(1, num_people + 1):
+            self.position[i] = 0
+            self.balance[i] = 0
     
     def add_bid(self, owner, price, quantity):
         if owner in self.bid_dict:
@@ -136,19 +151,32 @@ class Market:
     def start_game(self):
         self.sort_bids()
         self.sort_asks()
-        self.clear_overlapping_orders()
-        self.print_position()
-        self.print_balance()
-        self.view_orderbook()
         self.orderbook_spreads = {}
         # Calculate difference between bid and ask for each person
         for key in self.position:
             self.orderbook_spreads[key] = self.ask_dict.get(key, 99999999)[0] - self.bid_dict.get(key, 0)[0]
+        # Give points to people with the smallest spreads
+        # Person with smallest spread gets 3, second smallest gets 2, third smallest gets 1
+        spread_list: tuple[int, float] = sorted(self.orderbook_spreads.items(), key=lambda x: x[1])
+        for i in range(3):
+            self.points[spread_list[i][0]] = 3 - i
+        self.clear_overlapping_orders()
+        self.print_position()
+        self.print_balance()
+        self.view_orderbook()
     
     def rank(self):
         # Rank people by balance, tie broken by smaller orderbook spreads
         self.ranking = sorted(self.balance, key=lambda x: (self.balance[x], self.orderbook_spreads[x]))
-    
+        # First 4 gets 20, 19, 18, 17 points, next 4 gets 15, 13, 11, 9 points
+        # Next 4 gets 6, 3, 0, -3 points, last 4 gets -7, -11, -15, -19 points
+        increment = 1
+        point = 20
+        for i, person in enumerate(self.ranking):
+            self.points[person] += point
+            if i % 4 == 3:
+                increment += 1
+            point -= increment
     def settle(self):
         # Convert position to balance, using true value.
         for key in self.position:
