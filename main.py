@@ -16,6 +16,7 @@ class MarketApp:
         tk.Button(root, text="Settle", command=self.settle).grid(row = 0, column=6)
         tk.Button(root, text="View Balance and Positions", command=self.view_balance_and_positions).grid(row = 0, column=7)
         tk.Button(root, text="Rank", command=self.rank).grid(row = 0, column = 8)
+        tk.Button(root, text="Update Orderbook and Status", command=self.update_orderbook_and_status).grid(row = 0, column = 9)
     def create_order_form(self):
         self.entries = []  # Clear the entries list
         for i in range(1, self.market.num_people + 1):
@@ -101,8 +102,8 @@ class MarketApp:
     def view_balance_and_positions(self):
         status_window = tk.Toplevel(self.master)
         status_window.title("Status")
-        
-        tree = ttk.Treeview(status_window, columns=('Owner', 'Position', 'Balance'), show='headings')
+        self.balance_position_tree = ttk.Treeview(status_window, columns=('Owner', 'Position', 'Balance'), show='headings')
+        tree = self.balance_position_tree
         tree.heading('Owner', text='Owner')
         tree.heading('Position', text='Position')
         tree.heading('Balance', text='Balance')
@@ -122,7 +123,8 @@ class MarketApp:
         orderbook_window.title("Orderbook")
 
         # Create a Treeview widget within the new window
-        tree = ttk.Treeview(orderbook_window, columns=('Owner', 'Price', 'Quantity'), show='headings')
+        self.orderbook_tree = ttk.Treeview(orderbook_window, columns=('Owner', 'Price', 'Quantity'), show='headings')
+        tree = self.orderbook_tree
         tree.heading('Owner', text='Owner')
         tree.heading('Price', text='Price')
         tree.heading('Quantity', text='Quantity')
@@ -159,8 +161,20 @@ class MarketApp:
         for key in market.ranking:
             tree.insert('', 'end', values=(key, market.balance[key], market.orderbook_spreads[key]))
 
+    def update_orderbook_and_status(self):
+        for i in self.orderbook_tree.get_children():
+            self.orderbook_tree.delete(i)
+        for i in self.balance_position_tree.get_children():
+            self.balance_position_tree.delete(i)
+        for key in market.position:
+            self.balance_position_tree.insert('', 'end', values=(key, market.position[key], market.balance[key]))
+        for bid in market.bids[::-1]:
+            self.orderbook_tree.insert('', 'end', values=(bid.owner, bid.price, bid.quantity), tags=('bid',))
+        for ask in market.asks:
+            self.orderbook_tree.insert('', 'end', values=(ask.owner, ask.price, ask.quantity), tags=('ask',))
+
 # read true value from true_value.txt
-with open("true_value.txt", "r") as f:
+with open("true_value_1.txt", "r") as f:
     true_value = float(f.read().strip())
 
 market = Market(true_value=true_value, num_people=3)
