@@ -167,7 +167,7 @@ class Market:
     
     def rank(self):
         # Rank people by balance, tie broken by smaller orderbook spreads
-        self.ranking = sorted(self.balance, key=lambda x: (self.balance[x], self.orderbook_spreads[x]))
+        self.ranking = sorted(self.balance, key=lambda x: (self.balance[x], self.orderbook_spreads[x]), reverse=True)
         # First 4 gets 20, 19, 18, 17 points, next 4 gets 15, 13, 11, 9 points
         # Next 4 gets 6, 3, 0, -3 points, last 4 gets -7, -11, -15, -19 points
         increment = 1
@@ -177,6 +177,11 @@ class Market:
             if i % 4 == 3:
                 increment += 1
             point -= increment
+    
+    def rank_points(self):
+        self.point_ranking = sorted(self.points, key=lambda x: self.points[x], reverse=True)
+        for i, person in enumerate(self.point_ranking):
+            print(f"Person {person}: {self.points[person]} points")
     def settle(self):
         # Convert position to balance, using true value.
         for key in self.position:
